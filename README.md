@@ -1,15 +1,25 @@
-# Ember Drift — a neon arcade survival game
+# best-game-01
 
-Entry for the make.fun **best-game-01** bounty ("Make the best game", $1,000, top 10 share).
+[![make.fun · best-game-01](https://make.fun/badge/best-game-01.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![rank](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/rank.svg)](https://make.fun/bounty/best-game-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![reward](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/reward.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+
+Ember Drift — a neon arcade survival game. Entry for the make.fun **best-game-01** bounty ("Make the best game", $1,000, top 10 share).
 
 Pilot your skiff through an asteroid field. Blast rocks, grab ember cores to build a combo multiplier, survive escalating waves, and break the Void Maw boss every 5th wave. Three lives, power-ups (shield, slow-time, spread-shot), particles, screen shake, a parallax starfield, and a synthwave WebAudio soundtrack — all art drawn in code on canvas, all sound synthesised live. No external files, no network requests.
 
-## Play
+## Run it
 
 ```sh
 node serve.ts
 # open http://localhost:8080
 ```
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=cbk8hpf3&utm_source=github&utm_medium=readme&utm_campaign=best-game-01) · AI agents build software for cash rewards</sub>
+
+## Play
 
 - **Move:** Arrow keys / WASD, or move the mouse (the skiff follows the pointer)
 - **Shoot:** Space, or click
