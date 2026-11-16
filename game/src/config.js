@@ -1,56 +1,88 @@
-// EMBER DRIFT — config.js
-// Every tunable number and colour of the game lives here, in one place.
+// All tuning for Ember Drift in one place: canvas size, palette, speeds,
+// spawn pacing, scoring and the difficulty curve. Nothing here is read from
+// anywhere else, so balancing the game means editing this file alone.
+export const CFG = {
+  width: 1280,
+  height: 720,
+  step: 1 / 60,
 
-export const VIEW_WIDTH = 1280;
-export const VIEW_HEIGHT = 720;
+  // Palette: deep space, neon cyan ship, ember orange pickups.
+  colors: {
+    spaceTop: '#04040f',
+    spaceBottom: '#0b0b26',
+    nebulaViolet: '#6b21a8',
+    nebulaTeal: '#0e7490',
+    nebulaEmber: '#ff6b1a',
+    player: '#22d3ee',
+    playerCore: '#ecfeff',
+    flame: '#fb923c',
+    bullet: '#a5f3fc',
+    foeBullet: '#f87171',
+    ember: '#ffb703',
+    emberCore: '#fff7cc',
+    rock: '#94a3b8',
+    rockRim: '#f97316',
+    chaser: '#e879f9',
+    splitter: '#fbbf24',
+    shard: '#fcd34d',
+    armored: '#64748b',
+    shieldRing: '#38bdf8',
+    boss: '#ef4444',
+    bossCore: '#fbbf24',
+    hud: '#f8fafc',
+    hudDim: '#94a3b8',
+    danger: '#f87171',
+  },
 
-export const PALETTE = {
-  backgroundTop: '#070312',
-  backgroundBottom: '#12082e',
-  emberOrange: '#ff9a1f',
-  emberGold: '#ffd23e',
-  emberRed: '#ff4d2e',
-  cyan: '#37e6ff',
-  magenta: '#ff4fd8',
-  violet: '#8b5cff',
-  mint: '#4dffa6',
-  white: '#f4f6ff',
-  dimWhite: '#9aa3c7',
-  asteroidGrey: '#8d93ad',
-  asteroidDark: '#565d78',
-};
+  player: {
+    radius: 14,
+    accel: 1500,
+    maxSpeed: 430,
+    drag: 2.6,
+    fireCooldown: 0.14,
+    bulletSpeed: 760,
+    invulnSeconds: 2.0,
+    startLives: 3,
+  },
 
-export const PLAYER = {
-  radius: 18,
-  speed: 340,
-  accel: 2400,
-  friction: 0.88,
-  fireCooldown: 0.16,
-  bulletSpeed: 720,
-  maxLives: 3,
-  invulnerableSeconds: 2.0,
-  respawnSeconds: 1.2,
-};
+  combo: {
+    max: 8,
+    windowSeconds: 4.0,
+    emberScore: 25,
+  },
 
-export const WAVES = {
-  baseAsteroids: 6,
-  asteroidsPerWave: 3,
-  maxAsteroids: 42,
-  bossEvery: 5,
-  waveClearBonus: 250,
-  emberScore: 25,
-  asteroidScore: 50,
-  bossScore: 1500,
-};
+  waves: {
+    // Wave 1 is gentle on purpose: slow rocks only, so the first 30 seconds
+    // feel good. Density and speed ramp up from there.
+    baseBudget: 6,
+    budgetPerWave: 3,
+    spawnIntervalStart: 1.25,
+    spawnIntervalMin: 0.42,
+    speedScalePerWave: 0.06,
+    maxSpeedScale: 1.65,
+    clearBonusPerWave: 250,
+    bossEvery: 5,
+    bossBaseHp: 55,
+    bossHpPerBoss: 25,
+  },
 
-export const POWERUPS = {
-  shieldSeconds: 8,
-  slowSeconds: 6,
-  spreadSeconds: 10,
-  dropChance: 0.22,
-};
+  drops: {
+    emberChance: 0.6,
+    powerChance: 0.08,
+    bossEmbers: 6,
+  },
 
-export const COMBO = {
-  windowSeconds: 4,
-  maxMultiplier: 8,
+  powers: {
+    slowSeconds: 5,
+    spreadSeconds: 8,
+  },
+
+  scoring: {
+    rock: 50,
+    chaser: 100,
+    splitter: 80,
+    shard: 30,
+    armored: 150,
+    boss: 2000,
+  },
 };

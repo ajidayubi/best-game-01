@@ -1,127 +1,90 @@
-// EMBER DRIFT — shots.js
-// Deterministic screenshot states: ?shot=start|play|boss|end&seed=1 builds a
-// fixed scene from a seeded generator and a fixed simulated clock, so every
-// screenshot is a real render of the game's own code, reproducible shot to shot.
+// Deterministic screenshot scenes for Ember Drift. Each scene builds a
+// game state from a seed with fixed 1/60 s steps and scripted inputs only —
+// no wall clock, no Math.random — so the same seed always renders the same
+// frame, and the renderer can set window.__shotReady on it.
+import { createGame, startGame, stepGame } from './sim.js';
+import { scriptedInput } from './input.js';
+import { spawnFoe, spawnEmber, spawnBoss } from './entities.js';
+import { Sfx } from './audio.js';
 
-import { createSeededRandom, range } from './random.js';
-import { createAsteroid, createBoss, createEmber, createPlayer } from './entities.js';
-import { VIEW_HEIGHT, VIEW_WIDTH } from './config.js';
-import { createStarfield } from './render.js';
+const STEP = 1 / 60;
 
-export function buildShotScene(shot, seed) {
-  const random = createSeededRandom(seed);
-  const stars = createStarfield(random);
-  const player = createPlayer();
-  const scene = {
-    shot,
-    stars,
-    player,
-    asteroids: [],
-    bullets: [],
-    embers: [],
-    powerups: [],
-    particles: [],
-    score: 0,
-    combo: 1,
-    wave: 1,
-    best: 12480,
-    embersCollected: 0,
-    bestCombo: 1,
-    time: 0,
-    bannerText: '',
-    bannerAlpha: 0,
-  };
+// Keep the scripted pilot alive through a scene: if it dies, put it back
+// in the field instead of letting the scene end on a game-over screen.
+function keepPilotAlive(g) {
+  const p = g.player;
+  if (g.mode !== 'playing') return;
+  if (!p.alive) {
+    p.alive = true;
+    p.x = 640;
+    p.y = 600;
+    p.vx = 0;
+    p.vy = 0;
+    p.invuln = 0;
+    p.shield = true;
+  }
+  if (g.lives <= 0) g.lives = 3;
+}
 
-  if (shot === 'start') {
-    scene.time = 2.4;
-    scene.stars = stars;
-    for (let i = 0; i < 7; i += 1) {
-      const asteroid = createAsteroid(random, 1, 'top');
-      asteroid.y = range(random, 80, VIEW_HEIGHT - 80);
-      scene.asteroids.push(asteroid);
-    }
-    for (let i = 0; i < 5; i += 1) {
-      scene.embers.push(createEmber(random, range(random, 200, VIEW_WIDTH - 200), range(random, 150, 500)));
-    }
-    return scene;
+export function buildShot(kind, seed) {
+  const sfx = new Sfx(); // never unlocked: every call is a silent no-op
+
+  if (kind === 'start') {
+    return createGame(seed);
   }
 
-  if (shot === 'play') {
-    scene.wave = 3;
-    scene.score = 8450;
-    scene.combo = 4;
-    scene.bestCombo = 5;
-    scene.embersCollected = 23;
-    scene.time = 6.5;
-    scene.bannerText = 'WAVE 3';
-    scene.bannerAlpha = 0.9;
-    player.x = VIEW_WIDTH / 2 - 60;
-    player.y = VIEW_HEIGHT - 180;
-    for (let i = 0; i < 11; i += 1) {
-      const asteroid = createAsteroid(random, 3, 'top');
-      asteroid.y = range(random, 60, VIEW_HEIGHT - 260);
-      scene.asteroids.push(asteroid);
+  if (kind === 'play') {
+    const g = createGame(seed);
+    startGame(g, sfx);
+    g.director.startWave(3);
+    g.phase = 'fight';
+    g.phaseT = 0;
+    g.director.toSpawn = 40; // keep the field busy for the whole scene
+    spawnFoe(g, 'rock', 300, 140);
+    spawnFoe(g, 'chaser', 700, 120);
+    spawnFoe(g, 'splitter', 980, 200);
+    spawnFoe(g, 'armored', 500, 90);
+    spawnFoe(g, 'rock', 150, 300);
+    spawnFoe(g, 'chaser', 1100, 260);
+    spawnEmber(g, 420, 320);
+    spawnEmber(g, 860, 380);
+    spawnEmber(g, 640, 240);
+    for (let t = 0; t < 480; t++) {
+      stepGame(g, STEP, scriptedInput(t), sfx);
+      keepPilotAlive(g);
     }
-    for (let i = 0; i < 6; i += 1) {
-      scene.embers.push(createEmber(random, range(random, 150, VIEW_WIDTH - 150), range(random, 120, 480)));
-    }
-    scene.bullets = [
-      { x: player.x - 4, y: player.y - 90, vx: 0, vy: -720, radius: 4, dead: false, life: 1 },
-      { x: player.x + 30, y: player.y - 150, vx: 0, vy: -720, radius: 4, dead: false, life: 1 },
-      { x: player.x - 44, y: player.y - 200, vx: 0, vy: -720, radius: 4, dead: false, life: 1 },
-    ];
-    scene.powerups = [{ x: 980, y: 300, vx: 0, vy: 55, radius: 16, kind: 'shield', pulse: 0, dead: false, life: 12 }];
-    return scene;
+    return g;
   }
 
-  if (shot === 'boss') {
-    scene.wave = 5;
-    scene.score = 18200;
-    scene.combo = 6;
-    scene.bestCombo = 8;
-    scene.embersCollected = 51;
-    scene.time = 9.2;
-    scene.bannerText = 'VOID MAW';
-    scene.bannerAlpha = 0.85;
-    player.x = VIEW_WIDTH / 2;
-    player.y = VIEW_HEIGHT - 160;
-    player.shieldTimer = 5;
-    const boss = createBoss(5);
-    boss.x = VIEW_WIDTH / 2 + 80;
-    boss.y = 300;
-    boss.entering = false;
-    boss.health = Math.floor(boss.maxHealth * 0.62);
-    scene.asteroids.push(boss);
-    for (let i = 0; i < 6; i += 1) {
-      const asteroid = createAsteroid(random, 5, 'top');
-      asteroid.y = range(random, 260, VIEW_HEIGHT - 240);
-      scene.asteroids.push(asteroid);
+  if (kind === 'boss') {
+    const g = createGame(seed);
+    startGame(g, sfx);
+    g.director.startWave(5);
+    g.phase = 'boss';
+    g.phaseT = 0;
+    spawnBoss(g, 5);
+    spawnFoe(g, 'chaser', 300, 200);
+    spawnFoe(g, 'rock', 900, 160);
+    for (let t = 0; t < 360; t++) {
+      stepGame(g, STEP, scriptedInput(t), sfx);
+      keepPilotAlive(g);
     }
-    for (let i = 0; i < 4; i += 1) {
-      scene.embers.push(createEmber(random, range(random, 200, VIEW_WIDTH - 200), range(random, 300, 520)));
+    if (!g.boss) {
+      spawnBoss(g, 5);
+      g.boss.hp = Math.floor(g.boss.maxHp * 0.6);
     }
-    scene.bullets = [
-      { x: player.x, y: player.y - 120, vx: 0, vy: -720, radius: 4, dead: false, life: 1 },
-      { x: player.x - 26, y: player.y - 190, vx: -160, vy: -700, radius: 4, dead: false, life: 1 },
-      { x: player.x + 26, y: player.y - 190, vx: 160, vy: -700, radius: 4, dead: false, life: 1 },
-    ];
-    return scene;
+    return g;
   }
 
-  // end
-  scene.wave = 4;
-  scene.score = 21950;
-  scene.combo = 1;
-  scene.bestCombo = 8;
-  scene.embersCollected = 64;
-  scene.best = 21950;
-  scene.time = 3.1;
-  player.alive = false;
-  player.lives = 0;
-  for (let i = 0; i < 8; i += 1) {
-    const asteroid = createAsteroid(random, 4, 'top');
-    asteroid.y = range(random, 60, VIEW_HEIGHT - 120);
-    scene.asteroids.push(asteroid);
+  // end: a game-over screen over a quiet, drifting field.
+  const g = createGame(seed);
+  g.mode = 'over';
+  g.score = 12450;
+  g.wave = 7;
+  g.player.alive = false;
+  g.end = { score: 12450, wave: 7, kills: 86, cores: 41, best: 12450, isBest: true };
+  for (let i = 0; i < 4; i++) {
+    spawnFoe(g, 'rock', g.rng.range(100, 1180), g.rng.range(80, 420));
   }
-  return scene;
+  return g;
 }

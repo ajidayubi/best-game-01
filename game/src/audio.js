@@ -1,119 +1,146 @@
-// EMBER DRIFT — audio.js
-// All sound is synthesised live with WebAudio: no audio files, no network.
-// A quiet synthwave bass pulse runs under play; every action has a blip.
-
-export class SoundEngine {
+// All sound in Ember Drift is synthesized with WebAudio: no audio files,
+// no network, just oscillators and filtered noise. Every method is a safe
+// no-op until the player first interacts (browsers block audio before a
+// gesture) and while muted, so screenshot scenes and the title screen stay
+// silent on their own.
+export class Sfx {
   constructor() {
-    this.context = null;
-    this.masterGain = null;
-    this.musicGain = null;
-    this.musicTimer = null;
+    this.ctx = null;
+    this.master = null;
+    this.noiseBuf = null;
     this.muted = false;
-    this.musicStep = 0;
+    this.drone = null;
   }
 
   unlock() {
-    if (this.context) {
-      if (this.context.state === 'suspended') void this.context.resume();
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') void this.ctx.resume();
       return;
     }
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    this.context = new AudioContext();
-    this.masterGain = this.context.createGain();
-    this.masterGain.gain.value = 0.5;
-    this.masterGain.connect(this.context.destination);
-    this.musicGain = this.context.createGain();
-    this.musicGain.gain.value = 0.12;
-    this.musicGain.connect(this.masterGain);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.5;
+    this.master.connect(this.ctx.destination);
+    const len = this.ctx.sampleRate;
+    this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const data = this.noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
   }
 
-  toggleMute() {
-    this.muted = !this.muted;
-    if (this.masterGain) this.masterGain.gain.value = this.muted ? 0 : 0.5;
-    return this.muted;
+  setMuted(muted) {
+    this.muted = muted;
+    if (this.master) this.master.gain.value = muted ? 0 : 0.5;
   }
 
-  playTone({ frequency, endFrequency, duration, type, volume, when = 0 }) {
-    if (!this.context || this.muted) return;
-    const now = this.context.currentTime + when;
-    const oscillator = this.context.createOscillator();
-    const gain = this.context.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, now);
-    if (endFrequency !== undefined) {
-      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), now + duration);
-    }
-    gain.gain.setValueAtTime(volume, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    oscillator.connect(gain);
-    gain.connect(this.masterGain);
-    oscillator.start(now);
-    oscillator.stop(now + duration + 0.02);
+  // Short tone that slides from one frequency to another.
+  tone(freqA, freqB, seconds, type, gain) {
+    if (!this.ctx || this.muted) return;
+    const t0 = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const amp = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freqA, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqB), t0 + seconds);
+    amp.gain.setValueAtTime(gain, t0);
+    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
+    osc.connect(amp);
+    amp.connect(this.master);
+    osc.start(t0);
+    osc.stop(t0 + seconds + 0.02);
+  }
+
+  // Burst of filtered noise, for explosions and hits.
+  noise(seconds, filterFreq, gain) {
+    if (!this.ctx || this.muted) return;
+    const t0 = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = filterFreq;
+    const amp = this.ctx.createGain();
+    amp.gain.setValueAtTime(gain, t0);
+    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
+    src.connect(filter);
+    filter.connect(amp);
+    amp.connect(this.master);
+    src.start(t0);
+    src.stop(t0 + seconds + 0.02);
   }
 
   shoot() {
-    this.playTone({ frequency: 880, endFrequency: 220, duration: 0.09, type: 'square', volume: 0.12 });
+    this.tone(880, 420, 0.07, 'square', 0.08);
   }
 
-  explosion(big = false) {
-    this.playTone({ frequency: big ? 160 : 220, endFrequency: 40, duration: big ? 0.6 : 0.35, type: 'sawtooth', volume: big ? 0.35 : 0.22 });
-    this.playTone({ frequency: 90, endFrequency: 30, duration: 0.4, type: 'triangle', volume: 0.25 });
+  boom(big) {
+    this.noise(big ? 0.5 : 0.28, big ? 900 : 1400, big ? 0.5 : 0.3);
+    this.tone(big ? 180 : 220, 38, big ? 0.45 : 0.25, 'sine', 0.4);
   }
 
-  collect(comboStep) {
-    const base = 520 + Math.min(comboStep, 12) * 40;
-    this.playTone({ frequency: base, endFrequency: base * 1.5, duration: 0.12, type: 'sine', volume: 0.2 });
+  pickup(combo) {
+    const base = 620 + Math.min(combo, 8) * 60;
+    this.tone(base, base * 1.5, 0.09, 'sine', 0.16);
   }
 
-  powerup() {
-    this.playTone({ frequency: 440, duration: 0.1, type: 'sine', volume: 0.2 });
-    this.playTone({ frequency: 660, duration: 0.12, type: 'sine', volume: 0.2, when: 0.09 });
-    this.playTone({ frequency: 880, duration: 0.16, type: 'sine', volume: 0.2, when: 0.18 });
+  power() {
+    this.tone(523, 523, 0.1, 'triangle', 0.18);
+    setTimeout(() => this.tone(659, 659, 0.1, 'triangle', 0.18), 70);
+    setTimeout(() => this.tone(784, 784, 0.16, 'triangle', 0.2), 140);
   }
 
   hit() {
-    this.playTone({ frequency: 140, endFrequency: 60, duration: 0.3, type: 'sawtooth', volume: 0.3 });
+    this.noise(0.22, 700, 0.4);
+    this.tone(200, 55, 0.22, 'sawtooth', 0.3);
+  }
+
+  bossHit() {
+    this.tone(1400, 900, 0.06, 'triangle', 0.12);
   }
 
   waveClear() {
-    [523, 659, 784].forEach((frequency, index) => {
-      this.playTone({ frequency, duration: 0.14, type: 'triangle', volume: 0.18, when: index * 0.1 });
-    });
+    this.tone(392, 392, 0.12, 'triangle', 0.16);
+    setTimeout(() => this.tone(587, 587, 0.2, 'triangle', 0.18), 110);
   }
 
-  bossAlarm() {
-    this.playTone({ frequency: 98, endFrequency: 98, duration: 0.5, type: 'sawtooth', volume: 0.25 });
-    this.playTone({ frequency: 147, endFrequency: 147, duration: 0.5, type: 'sawtooth', volume: 0.2, when: 0.5 });
+  start() {
+    this.tone(220, 880, 0.35, 'sawtooth', 0.1);
   }
 
-  startMusic() {
-    if (!this.context || this.musicTimer) return;
-    const bassline = [55, 0, 55, 0, 65.41, 0, 49, 0, 55, 0, 55, 0, 82.41, 0, 73.42, 0];
-    this.musicTimer = window.setInterval(() => {
-      if (this.muted) return;
-      const note = bassline[this.musicStep % bassline.length];
-      this.musicStep += 1;
-      if (note > 0) {
-        const now = this.context.currentTime;
-        const oscillator = this.context.createOscillator();
-        const gain = this.context.createGain();
-        oscillator.type = 'triangle';
-        oscillator.frequency.setValueAtTime(note, now);
-        gain.gain.setValueAtTime(0.5, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        oscillator.connect(gain);
-        gain.connect(this.musicGain);
-        oscillator.start(now);
-        oscillator.stop(now + 0.25);
-      }
-    }, 150);
+  gameOver() {
+    const notes = [392, 330, 262, 196];
+    notes.forEach((n, i) => setTimeout(() => this.tone(n, n * 0.94, 0.3, 'triangle', 0.2), i * 170));
   }
 
-  stopMusic() {
-    if (this.musicTimer) {
-      window.clearInterval(this.musicTimer);
-      this.musicTimer = null;
+  // Quiet low drone under gameplay; started once, stopped on game over.
+  startDrone() {
+    if (!this.ctx || this.muted || this.drone) return;
+    const osc = this.ctx.createOscillator();
+    const osc2 = this.ctx.createOscillator();
+    const amp = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 55;
+    osc2.type = 'sine';
+    osc2.frequency.value = 55.7;
+    amp.gain.value = 0.035;
+    osc.connect(amp);
+    osc2.connect(amp);
+    amp.connect(this.master);
+    osc.start();
+    osc2.start();
+    this.drone = { osc, osc2, amp };
+  }
+
+  stopDrone() {
+    if (!this.drone) return;
+    try {
+      this.drone.amp.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+      this.drone.osc.stop(this.ctx.currentTime + 0.3);
+      this.drone.osc2.stop(this.ctx.currentTime + 0.3);
+    } catch (e) {
+      /* already stopped */
     }
+    this.drone = null;
   }
 }
