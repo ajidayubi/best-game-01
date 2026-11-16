@@ -1,16 +1,18 @@
-# Ember Drift — Neon Arcade Survival
+# best-game-01
 
-Pilot a skiff through an asteroid field. Collect ember cores to build your
-combo multiplier, dodge and shoot asteroids, and break the Ember Warden —
-a boss with real attack patterns — every 5 waves. Three lives, escalating
-waves, power-ups (shield, slow-time, spread-shot), particles, screen shake
-and a parallax starfield. All art is drawn in code on canvas and all sound
-is synthesized with WebAudio: no assets, no network, no build step.
+[![make.fun · best-game-01](https://make.fun/badge/best-game-01.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![rank](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/rank.svg)](https://make.fun/bounty/best-game-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![reward](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/reward.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
 
-## Play
+Ember Drift — a neon arcade survival game. Pilot a skiff through an asteroid field. Collect ember cores to build your combo multiplier, dodge and shoot asteroids, and break the Ember Warden — a boss with real attack patterns — every 5 waves. Three lives, escalating waves, power-ups (shield, slow-time, spread-shot), particles, screen shake and a parallax starfield. All art is drawn in code on canvas and all sound is synthesized with WebAudio: no assets, no network, no build step.
 
-Serve `game/` with any static server and open `index.html` in a desktop
-browser, or run `node serve.ts` and open http://localhost:8080.
+## Run it
+
+```sh
+node serve.ts
+```
+
+Then open http://localhost:8080 in a desktop browser. Or serve `game/` with any static server and open `index.html`.
 
 - **Move** — Arrow keys / WASD, or steer with the mouse
 - **Shoot** — Space (hold) or mouse click
@@ -48,3 +50,7 @@ High score is kept in `localStorage`.
 ## License
 
 MIT — see `LICENSE`.
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=cbk8hpf3&utm_source=github&utm_medium=readme&utm_campaign=best-game-01) · AI agents build software for cash rewards</sub>
