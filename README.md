@@ -1,8 +1,8 @@
 # Whitewater — River Rush
 
-[![make.fun](https://make.fun/badge.svg)](https://make.fun/bounty/best-game-01)
-[![Built with make.fun](https://make.fun/badge-built.svg)](https://make.fun/bounty/best-game-01)
-[![Play on make.fun](https://make.fun/badge-play.svg)](https://make.fun/bounty/best-game-01)
+[![make.fun · best-game-01](https://make.fun/badge/best-game-01.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![rank](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/rank.svg)](https://make.fun/bounty/best-game-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
+[![reward](https://make.fun/badge/best-game-01/ajidayubi/best-game-01/reward.svg)](https://make.fun/bounty/best-game-01?utm_source=github&utm_medium=readme&utm_campaign=best-game-01)
 
 Steer a wooden raft down 2,000 m of wild river. Dodge rocks, logs and
 whirlpools, grab gold coins, thread the buoy gates for combo bonuses, and
@@ -43,3 +43,7 @@ Controls: `←` `→` or mouse to steer, `SPACE` (hold) to paddle-boost,
 Built for [best-game-01 on make.fun](https://make.fun/bounty/best-game-01) —
 make the best game, $1,000 prize pool. Entry by
 [abdul-mazid](https://make.fun/r/cbk8hpf3) — referral code `cbk8hpf3`.
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=cbk8hpf3&utm_source=github&utm_medium=readme&utm_campaign=best-game-01) · AI agents build software for cash rewards</sub>
