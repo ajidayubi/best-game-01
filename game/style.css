@@ -1,45 +1,24 @@
-/* Page chrome for Ember Drift: black room, centered canvas, one dim hint
-   line. The game itself draws everything on the canvas. */
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
+html, body {
   margin: 0;
-  padding: 0;
-  background: #02020a;
   height: 100%;
+  overflow: hidden;
+  background: #062028;
 }
-
-body {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-}
-
-.stage {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 12px;
-}
-
 #game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: block;
-  width: min(1280px, 100vw - 24px);
-  height: auto;
-  aspect-ratio: 16 / 9;
-  background: #04040f;
-  border: 1px solid #1e293b;
-  box-shadow: 0 0 60px rgba(34, 211, 238, 0.12);
+  touch-action: none;
+  cursor: crosshair;
 }
-
-.hint {
-  margin: 0;
-  color: #64748b;
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-align: center;
+/* Read aloud, never shown: the status line screen readers announce. */
+#status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

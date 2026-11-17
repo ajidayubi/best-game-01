@@ -1,146 +1,90 @@
-// All sound in Ember Drift is synthesized with WebAudio: no audio files,
-// no network, just oscillators and filtered noise. Every method is a safe
-// no-op until the player first interacts (browsers block audio before a
-// gesture) and while muted, so screenshot scenes and the title screen stay
-// silent on their own.
-export class Sfx {
-  constructor() {
-    this.ctx = null;
-    this.master = null;
-    this.noiseBuf = null;
-    this.muted = false;
-    this.drone = null;
-  }
+// Whitewater sound effects: tiny WebAudio synth, no audio files.
+// Everything is created on first user gesture; any failure silently
+// disables sound so the game never breaks on a headless run.
 
-  unlock() {
-    if (this.ctx) {
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
-      return;
-    }
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    this.ctx = new AC();
-    this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
-    this.master.connect(this.ctx.destination);
-    const len = this.ctx.sampleRate;
-    this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const data = this.noiseBuf.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-  }
+let ctx = null;
+let muted = false;
 
-  setMuted(muted) {
-    this.muted = muted;
-    if (this.master) this.master.gain.value = muted ? 0 : 0.5;
-  }
-
-  // Short tone that slides from one frequency to another.
-  tone(freqA, freqB, seconds, type, gain) {
-    if (!this.ctx || this.muted) return;
-    const t0 = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const amp = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freqA, t0);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqB), t0 + seconds);
-    amp.gain.setValueAtTime(gain, t0);
-    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
-    osc.connect(amp);
-    amp.connect(this.master);
-    osc.start(t0);
-    osc.stop(t0 + seconds + 0.02);
-  }
-
-  // Burst of filtered noise, for explosions and hits.
-  noise(seconds, filterFreq, gain) {
-    if (!this.ctx || this.muted) return;
-    const t0 = this.ctx.currentTime;
-    const src = this.ctx.createBufferSource();
-    src.buffer = this.noiseBuf;
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = filterFreq;
-    const amp = this.ctx.createGain();
-    amp.gain.setValueAtTime(gain, t0);
-    amp.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
-    src.connect(filter);
-    filter.connect(amp);
-    amp.connect(this.master);
-    src.start(t0);
-    src.stop(t0 + seconds + 0.02);
-  }
-
-  shoot() {
-    this.tone(880, 420, 0.07, 'square', 0.08);
-  }
-
-  boom(big) {
-    this.noise(big ? 0.5 : 0.28, big ? 900 : 1400, big ? 0.5 : 0.3);
-    this.tone(big ? 180 : 220, 38, big ? 0.45 : 0.25, 'sine', 0.4);
-  }
-
-  pickup(combo) {
-    const base = 620 + Math.min(combo, 8) * 60;
-    this.tone(base, base * 1.5, 0.09, 'sine', 0.16);
-  }
-
-  power() {
-    this.tone(523, 523, 0.1, 'triangle', 0.18);
-    setTimeout(() => this.tone(659, 659, 0.1, 'triangle', 0.18), 70);
-    setTimeout(() => this.tone(784, 784, 0.16, 'triangle', 0.2), 140);
-  }
-
-  hit() {
-    this.noise(0.22, 700, 0.4);
-    this.tone(200, 55, 0.22, 'sawtooth', 0.3);
-  }
-
-  bossHit() {
-    this.tone(1400, 900, 0.06, 'triangle', 0.12);
-  }
-
-  waveClear() {
-    this.tone(392, 392, 0.12, 'triangle', 0.16);
-    setTimeout(() => this.tone(587, 587, 0.2, 'triangle', 0.18), 110);
-  }
-
-  start() {
-    this.tone(220, 880, 0.35, 'sawtooth', 0.1);
-  }
-
-  gameOver() {
-    const notes = [392, 330, 262, 196];
-    notes.forEach((n, i) => setTimeout(() => this.tone(n, n * 0.94, 0.3, 'triangle', 0.2), i * 170));
-  }
-
-  // Quiet low drone under gameplay; started once, stopped on game over.
-  startDrone() {
-    if (!this.ctx || this.muted || this.drone) return;
-    const osc = this.ctx.createOscillator();
-    const osc2 = this.ctx.createOscillator();
-    const amp = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 55;
-    osc2.type = 'sine';
-    osc2.frequency.value = 55.7;
-    amp.gain.value = 0.035;
-    osc.connect(amp);
-    osc2.connect(amp);
-    amp.connect(this.master);
-    osc.start();
-    osc2.start();
-    this.drone = { osc, osc2, amp };
-  }
-
-  stopDrone() {
-    if (!this.drone) return;
-    try {
-      this.drone.amp.gain.setValueAtTime(0.0001, this.ctx.currentTime);
-      this.drone.osc.stop(this.ctx.currentTime + 0.3);
-      this.drone.osc2.stop(this.ctx.currentTime + 0.3);
-    } catch (e) {
-      /* already stopped */
-    }
-    this.drone = null;
+export function initAudio() {
+  try {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') void ctx.resume();
+  } catch {
+    ctx = null;
   }
 }
+
+export function toggleMute() {
+  muted = !muted;
+  return muted;
+}
+
+function tone(freq, dur, type, vol, when = 0, slideTo = null) {
+  if (!ctx || muted) return;
+  try {
+    const t0 = ctx.currentTime + when;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  } catch {
+    // Sound is decoration; never let it break the game.
+  }
+}
+
+function noise(dur, vol, when = 0) {
+  if (!ctx || muted) return;
+  try {
+    const t0 = ctx.currentTime + when;
+    const len = Math.floor(ctx.sampleRate * dur);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start(t0);
+  } catch {
+    // Ignore.
+  }
+}
+
+export const sfx = {
+  coin() {
+    tone(880, 0.09, 'sine', 0.16);
+    tone(1318, 0.12, 'sine', 0.14, 0.07);
+  },
+  gate() {
+    tone(523, 0.1, 'triangle', 0.18);
+    tone(659, 0.1, 'triangle', 0.18, 0.08);
+    tone(784, 0.16, 'triangle', 0.2, 0.16);
+  },
+  hit() {
+    tone(160, 0.25, 'sawtooth', 0.22, 0, 60);
+    noise(0.22, 0.25);
+  },
+  splash() {
+    noise(0.12, 0.08);
+  },
+  level() {
+    tone(392, 0.1, 'square', 0.1);
+    tone(523, 0.14, 'square', 0.1, 0.09);
+  },
+  win() {
+    [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.18, i * 0.12));
+  },
+  wreck() {
+    [330, 262, 196].forEach((f, i) => tone(f, 0.22, 'sawtooth', 0.14, i * 0.16));
+  },
+};
